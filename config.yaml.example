@@ -1,0 +1,9 @@
+targets:
+  - # Only 'ping' supported
+    type: ping
+    # Target ipv4 address to monitor
+    target: 1.1.1.1
+    # (Optional) Timeout for each ping request. Default is 5000ms
+    timeout_millis: 5000
+    # (Optional) Interval between each ping request. Default is 15000ms
+    interval_millis: 15000
