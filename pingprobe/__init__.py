@@ -53,7 +53,7 @@ async def ping(target: Target) -> PingResult:
     except icmplib.DestinationUnreachable:
         return PingResult(target.address, success=False, status='destination_unreachable')
     except Exception as e:
-        logging.error(f'Unknown error pinging {target.address}', e)
+        logging.error(f'Unknown error pinging {target.address}', exc_info=e)
         return PingResult(target.address, success=False, status='unknown_error')
 
     if response.packets_received == 1:

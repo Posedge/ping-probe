@@ -6,10 +6,9 @@ WORKDIR /app
 COPY Pipfile Pipfile.lock ./
 RUN pipenv install --system --ignore-pipfile --dev
 
-# Create a non-root user and group
-RUN groupadd -r appuser && useradd -r -g appuser appuser
-RUN chown -R appuser:appuser /app
-USER appuser
+# Run as non-root user
+ARG USER=1000
+USER ${USER}
 COPY pingprobe/ ./pingprobe/
 
 # Run tests
