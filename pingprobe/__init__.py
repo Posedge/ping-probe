@@ -9,9 +9,14 @@ from typing import List
 
 import yaml
 import icmplib
+import prometheus_client as prometheus
 
 
 CONFIG_PATH = pathlib.Path('config.yaml')
+PROBE_COUNTER = prometheus.Counter(
+    'probes', 'Total number of probe attempts by status', ['address', 'status'])
+LATENCY_HISTOGRAM = prometheus.Histogram(
+    'probe_latency_millis', 'Latency of successful probes in milliseconds', ['address'])
 
 
 @dataclasses.dataclass
@@ -31,8 +36,10 @@ class PingResult:
 
 
 def record(result: PingResult):
-    # TODO
     logging.debug(f'Ping {result.address}: {result}')
+    PROBE_COUNTER.labels(address=result.address, status=result.status).inc()
+    if result.success and result.rtt_ms is not None:
+        LATENCY_HISTOGRAM.labels(address=result.address).observe(result.rtt_ms)
 
 
 async def ping(target: Target) -> PingResult:
