@@ -2,12 +2,13 @@ import sys
 import pathlib
 import logging
 import dataclasses
+import asyncio
 
 
 import yaml
 
 
-CONFIG_FILE = pathlib.Path('config.yaml')
+CONFIG_PATH = pathlib.Path('config.yaml')
 
 
 @dataclasses.dataclass
@@ -18,7 +19,7 @@ class Target:
     interval_millis: int = 15000
 
 
-def read_config(config_path=CONFIG_FILE):
+def read_config(config_path=CONFIG_PATH):
     if not config_path.exists():
         logging.error(f'{config_path} not found. See {config_path}.example for an example.')
         sys.exit(1)
@@ -26,8 +27,19 @@ def read_config(config_path=CONFIG_FILE):
         return yaml.safe_load(fin)
 
 
-def start_monitoring(target: Target):
+async def monitor_target(target: Target):
     logging.info('Target: %s', target)
+    try:
+        while True:
+            logging.debug('Monitoring %s', target.target)  # TODO
+            await asyncio.sleep(target.interval_millis / 1000.)
+    except asyncio.CancelledError:
+        logging.info('Stopped monitoring %s', target.target)
+
+
+async def monitor(targets):
+    tasks = map(lambda t: asyncio.create_task(monitor_target(t)), targets)
+    await asyncio.gather(*tasks)
 
 
 def main():
@@ -35,8 +47,14 @@ def main():
 
     config = read_config()
     targets = config.get('targets', [])
-    for target_config in targets:
-        start_monitoring(Target(**target_config))
+    if not targets:
+        logging.error('No targets found in config. Exiting.')
+        return
+
+    try:
+        asyncio.run(monitor([Target(**target) for target in targets]))
+    except KeyboardInterrupt:
+        logging.info('Keyboard interrupt received, exiting...')
 
 
 if __name__ == '__main__':
