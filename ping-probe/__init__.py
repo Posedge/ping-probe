@@ -22,15 +22,32 @@ class Target:
     interval_millis: int = 15000
 
 
-async def ping(target: Target):
+@dataclasses.dataclass
+class PingResult:
+    success: bool
+    status: str
+    rtt_ms: float = None
+
+
+async def ping(target: Target) -> PingResult:
     try:
-        result = await icmplib.async_ping(
+        response = await icmplib.async_ping(
             target.address, count=1, timeout=target.timeout_millis/1000., privileged=False)
-    except icmplib.ICMPError:
-        logging.warning('Failed to ping %s', target.address)
+    except icmplib.NameLookupError:
+        result = PingResult(success=False, status='name_lookup_error')
+    except icmplib.TimeoutExceeded:
+        result = PingResult(success=False, status='timeout')
+    except icmplib.DestinationUnreachable:
+        result = PingResult(success=False, status='destination_unreachable')
+    except Exception as e:
+        logging.error(f'Error pinging {target.address}', e)
+        result = PingResult(success=False, status='unknown_error')
     else:
-        logging.debug(f'Ping {target.address}: rtt ms={result.min_rtt}, '
-                      f'response received={'yes' if result.packets_received == 1 else 'no'}')
+        if response.packets_received == 1:
+            result = PingResult(success=True, status='success', rtt_ms=response.min_rtt )
+        else:
+            result = PingResult(success=False, status='unknown_error')
+    logging.debug(f'Ping {target.address}: {result}')
 
 
 async def sleep_until(target_time):
@@ -47,7 +64,7 @@ async def monitor_target(target: Target):
             await ping(target)
             await sleep_until(interval_start + target.interval_millis/1000.)
     except asyncio.CancelledError:
-        logging.info('Stopped monitoring %s', target.address)
+        logging.debug('Stopped monitoring %s', target.address)
 
 
 async def monitor(targets: List[Target]):
