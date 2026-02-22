@@ -35,7 +35,7 @@ class PingResult:
     rtt_ms: float = None
 
 
-def record(result: PingResult):
+def export(result: PingResult):
     logging.debug(f'Ping {result.address}: {result}')
     PROBE_COUNTER.labels(address=result.address, status=result.status).inc()
     if result.success and result.rtt_ms is not None:
@@ -74,7 +74,7 @@ async def monitor_target(target: Target):
         while True:
             interval_start = time.time()
             result = await ping(target)
-            record(result)
+            export(result)
             await sleep_until(interval_start + target.interval_millis/1000.)
     except asyncio.CancelledError:
         logging.debug('Stopped monitoring %s', target.address)
@@ -85,7 +85,7 @@ async def monitor(targets: List[Target]):
     await asyncio.gather(*tasks)
 
 
-def read_config(config_path=CONFIG_PATH):
+def read_config(config_path=CONFIG_PATH) -> dict:
     if not config_path.exists():
         logging.error(f'{config_path} not found. See {config_path}.example for an example.')
         sys.exit(1)
@@ -102,10 +102,16 @@ def main():
         logging.error('No targets found in config. Exiting.')
         return
 
+    prom_port = config.get('monitoring', {}).get('prometheus', {}).get('port', 8000)
+    logging.info(f'Starting Prometheus server on port {prom_port}')
+    server, server_thread = prometheus.start_http_server(prom_port)
     try:
         asyncio.run(monitor([Target(**target) for target in targets]))
     except KeyboardInterrupt:
         logging.info('Keyboard interrupt received, exiting...')
+    server.shutdown()
+    server.server_close()
+    server_thread.join()
 
 
 if __name__ == '__main__':
