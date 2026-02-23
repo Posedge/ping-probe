@@ -94,9 +94,10 @@ def read_config(config_path=CONFIG_PATH) -> dict:
 
 
 def main():
-    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s [%(levelname)s] %(message)s')
-
     config = read_config()
+    log_level = config.get('logging', {}).get('level', 'DEBUG')
+    logging.basicConfig(level=log_level, format='%(asctime)s [%(levelname)s] %(message)s')
+
     targets = config.get('targets', [])
     if not targets:
         logging.error('No targets found in config. Exiting.')

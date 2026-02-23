@@ -13,3 +13,6 @@ monitoring:
   prometheus:
     # Port to expose Prometheus metrics on. Default is 8000
     port: 8000
+logging:
+  # Log level. Default is DEBUG. Valid values are DEBUG, INFO, WARNING, ERROR, CRITICAL.
+  level: DEBUG
