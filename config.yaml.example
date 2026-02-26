@@ -9,6 +9,12 @@ targets:
     interval_millis: 15000
   - type: ping
     address: wikipedia.org
+    # (Optional) Labels to attach to metrics from this target
+    labels:
+      - name: probe_type
+        value: dns
+      - name: alias
+        value: cloudflare_dns
 monitoring:
   prometheus:
     # Port to expose Prometheus metrics on. Default is 8000
